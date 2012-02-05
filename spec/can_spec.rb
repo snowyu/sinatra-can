@@ -152,9 +152,11 @@ describe 'sinatra-can' do
   end
 
   it "should return a 404 when the autoload fails" do
+    dummy = Article.create(:title => 'test4')
+
     app.user { User.new('admin') }
-    app.get('/article14/:id', :model => Article) { @article.title }
-    get '/article14/999'
+    app.get('/14x/:id', :model => Article) { @article.title }
+    get '/14x/999'
     last_response.status.should == 404
   end
 end
