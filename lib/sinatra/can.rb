@@ -46,9 +46,7 @@ module Sinatra
       #
       def authorize!(action, subject, options = {})
         if current_ability.cannot?(action, subject, options)
-          error 403 unless options[:not_auth] || settings.respond_to?(:not_auth)
-          redirect options[:not_auth] if options[:not_auth]
-          redirect settings.not_auth if settings.respond_to?(:not_auth)
+          redirect options[:not_auth] || settings.not_auth || error(403)
         end
       end
 
@@ -72,19 +70,11 @@ module Sinatra
       # - :list (get without an :id)
       # - :view (get)
       # - :create (post)
-      # - :update (put)
+      # - :update (put or patch)
       # - :delete (delete)
       def load_and_authorize!(model)
-        model = model.class unless model.class == Class
-
-        if params[:id]
-          instance ||= model.find_by_id(params[:id]) if model.respond_to? :find_by_id   # ActiveRecord
-          instance ||= model.get(params[:id]) if model.respond_to? :get                 # DataMapper
-          instance ||= model[params[:id]] if model.superclass.to_s == 'Sequel::Model'   # Sequel
-          error 404 unless instance
-          instance_name = model.name.gsub(/([a-z\d])([A-Z])/,'\1_\2').downcase
-          self.instance_variable_set("@#{instance_name}", instance)
-        end
+        model = model.class unless model.is_a? Class
+        instance = current_instance(params[:id], model) if params[:id]
 
         authorize! current_operation, instance || model
       end
@@ -98,6 +88,16 @@ module Sinatra
 
       def current_user
         @current_user ||= instance_eval(&self.class.current_user_block) if self.class.current_user_block
+      end
+
+      def current_instance(id, model)
+        instance ||= model.find_by_id(id) if model.respond_to? :find_by_id   # ActiveRecord
+        instance ||= model.get(id) if model.respond_to? :get                 # DataMapper
+        instance ||= model[id] if model.superclass.to_s == 'Sequel::Model'   # Sequel
+        error 404 unless instance
+        instance_name = model.name.gsub(/([a-z\d])([A-Z])/,'\1_\2').downcase
+        self.instance_variable_set("@#{instance_name}", instance)
+        instance
       end
 
       def current_operation
@@ -141,8 +141,9 @@ module Sinatra
     end
 
     def self.registered(app)
-      app.set(:can) { |a,b| condition { authorize! a, b } }
-      app.set(:model) { |a| condition { load_and_authorize! a } }
+      app.set(:can)   { |action, subject| condition { authorize!(action, subject) } }
+      app.set(:model) { |subject| condition { load_and_authorize!(subject) } }
+      app.set(:not_auth, nil)
       app.helpers Helpers
     end
   end
