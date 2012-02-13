@@ -91,9 +91,9 @@ module Sinatra
       end
 
       def current_instance(id, model)
-        instance ||= model.find_by_id(id) if model.respond_to? :find_by_id   # ActiveRecord
-        instance ||= model.get(id) if model.respond_to? :get                 # DataMapper
-        instance ||= model[id] if model.superclass.to_s == 'Sequel::Model'   # Sequel
+        instance ||= model.find_by_id(id)   if model.respond_to? :find_by_id    # ActiveRecord
+        instance ||= model.first(:id => id) if model.respond_to? :first         # DataMapper/MongoMapper
+        instance ||= model[id.to_i]         if model.respond_to? :[]            # Hash/Sequel/Ohm
         error 404 unless instance
         instance_name = model.name.gsub(/([a-z\d])([A-Z])/,'\1_\2').downcase
         self.instance_variable_set("@#{instance_name}", instance)
