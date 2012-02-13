@@ -7,8 +7,11 @@ require 'sinatra/can'
 describe 'sinatra-can' do
   include Rack::Test::Methods
 
+  class MyAppDM < Sinatra::Application
+  end
+
   def app
-    Sinatra::Application
+    MyAppDM
   end
 
   before do
@@ -39,6 +42,8 @@ describe 'sinatra-can' do
       can :read, :all
       can :read, Article
       cannot :create, Article
+      can :list, User if user.is_admin?
+      can :list, User, :id => user.id
     end
 
     app.set :dump_errors, true
@@ -158,5 +163,19 @@ describe 'sinatra-can' do
     app.get('/article14/:id', :model => Article) { @article.title }
     get '/article14/999'
     last_response.status.should == 404
+  end
+
+  it "should autoload a collection as the admin" do
+    app.user { User.get(1) }
+    app.get('/15', :model => Proc.new { User }) { @user.count.to_s }
+    get '/15'
+    last_response.body.should == '2'
+  end
+
+  it "should 403 on autoloading a collection when being a guest" do
+    app.user { User.get(2) }
+    app.get('/16', :model => Proc.new { User }) { @user.count.to_s }
+    get '/16'
+    last_response.body.should == "1"
   end
 end
