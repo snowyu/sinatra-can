@@ -1,5 +1,4 @@
-require 'cancan/ability'
-require 'cancan/rule'
+require 'cancan'
 
 module Sinatra
   # Sinatra::Can is a lightweight wrapper for CanCan. It contains a partial implementation of the ActiveController helpers.
