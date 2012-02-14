@@ -15,6 +15,8 @@ To use it in your project, just require it:
 
     require 'sinatra/can'
 
+You have to load this gem *after* ActiveRecord/DataMapper in order to take advantage of CanCan's model extensions.
+
 ## Abilities
 
 Abilities are defined using a block just like with Sinatra. Here's the canonical example, which gives permission for admin users to manage and for non-admins to read:

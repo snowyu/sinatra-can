@@ -63,6 +63,15 @@ module Sinatra
       #     get '/projects/:id', :model => Project do
       #       @project.name
       #     end
+      # 
+      # You can load collections too, with both syntaxes. Just use a `get` handler, without an `:id` property:
+      # 
+      #     get '/projects', :model => Project do
+      #       # here are your projects
+      #       @project
+      #     end
+      # 
+      # Both collection loading and individual entity loading will respect the resource conditions.
       #
       # Authorization also happens automatically, depending on the HTTP verb. Here's the CanCan actions for each verb:
       # 
