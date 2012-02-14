@@ -2,7 +2,8 @@ require 'rspec'
 require 'rack/test'
 require 'sinatra'
 require 'dm-core'
-require 'sinatra/can'
+require 'dm-migrations'
+require './lib/sinatra/can'
 
 describe 'sinatra-can' do
   include Rack::Test::Methods
@@ -14,8 +15,8 @@ describe 'sinatra-can' do
     MyAppDM
   end
 
-  before do
-    DataMapper.setup(:default, :adapter => 'in_memory')
+  before :all do
+    DataMapper.setup(:default, 'sqlite::memory:')
 
     class Article
       include DataMapper::Resource
@@ -36,6 +37,7 @@ describe 'sinatra-can' do
     end
 
     DataMapper.finalize
+    DataMapper.auto_upgrade!
 
     ability do |user|
       can :edit, :all if user.is_admin?
@@ -132,7 +134,7 @@ describe 'sinatra-can' do
     article = Article.create(:title => 'test2')
 
     app.user { User.get(1) }
-    app.post('/11', :model => ::Article) { }
+    app.post('/11', :model => Proc.new { Article }) { }
     post '/11'
     last_response.status.should == 403
   end
@@ -141,7 +143,7 @@ describe 'sinatra-can' do
     article = Article.create(:title => 'test3')
 
     app.user { User.get(1) }
-    app.get('/12/:id', :model => ::Article) { @article.title }
+    app.get('/12/:id', :model => Proc.new { Article }) { @article.title }
     get '/12/' + article.id.to_s
     last_response.body.should == article.title
   end
@@ -150,7 +152,7 @@ describe 'sinatra-can' do
     article = Article.create(:title => 'test4')
 
     app.user { User.get(1) }
-    app.before('/13/:id', :model => Article) { }
+    app.before('/13/:id', :model => Proc.new { Article }) { }
     app.get('/13/:id') { @article.title }
     get '/13/' + (article.id).to_s
     last_response.body.should == article.title
@@ -160,22 +162,22 @@ describe 'sinatra-can' do
     dummy = Article.create(:title => 'test4')
 
     app.user { User.get(1) }
-    app.get('/article14/:id', :model => Article) { @article.title }
+    app.get('/article14/:id', :model => Proc.new { Article }) { @article.title }
     get '/article14/999'
     last_response.status.should == 404
   end
 
   it "should autoload a collection as the admin" do
     app.user { User.get(1) }
-    app.get('/15', :model => Proc.new { User }) { @user.count.to_s }
+    app.get('/15', :model => Proc.new { User }) { @user.all(:name => 'admin').count.to_s }
     get '/15'
-    last_response.body.should == '2'
+    last_response.body.should == '1'
   end
 
   it "should 403 on autoloading a collection when being a guest" do
     app.user { User.get(2) }
-    app.get('/16', :model => Proc.new { User }) { @user.count.to_s }
+    app.get('/16', :model => Proc.new { User }) { @user.all(:name => 'admin').count.to_s }
     get '/16'
-    last_response.body.should == "1"
+    last_response.body.should == "0"
   end
 end
