@@ -90,6 +90,16 @@ Sinatra lacks controllers, but you can use "before" blocks to restrict groups of
       authorize! :manage, Customers
     end
 
+## Resource Conditions
+
+You can authorize based on model attributes as well. You can pass a hash of conditions as the last attribute on `can` or `cannot`. Here's an example: maybe you just want an user to see Projects owned by his own group.
+
+    ability do |user
+      can :access, Projects, :group_id => user.group_id
+    end
+
+This condition works with all the other helpers, and provide you with even more granularity and ease of ability declaration.
+
 ## Conditions
 
 There is a built-in condition called :can that can be used in your blocks. It returns 403 when the user has no access. It basically replaces the authorize! method.
@@ -121,12 +131,21 @@ There's also a handy condition:
       @project.name
     end
 
+You can load collections too, with both syntaxes. Just use a `get` handler, without an `:id` property:
+
+    get '/projects', :model => Project do
+      # here are your projects
+      @project
+    end
+
+Both collection loading and individual entity loading will respect the resource conditions.
+
 Authorization happens right after autoloading, and depends on the HTTP verb. Here's the CanCan actions for each verb:
 
  - :list (get without an :id)
  - :view (get)
  - :create (post)
- - :update (put)
+ - :update (put or patch)
  - :delete (delete)
 
 So, for a model called Projects, you can define your Ability like this, for example:
@@ -137,6 +156,14 @@ So, for a model called Projects, you can define your Ability like this, for exam
       can :create, Project if user.is_manager?
       can :update, Project if user.is_admin?
       can :delete, Project if user.is_admin?
+    end
+
+## Alert:
+
+DataMapper Models are problematic when used with Sinatra conditions, since DataMapper turns the class constant into a method, and Sinatra evaluates every parameter. So, when using it with the :model condition, wrap it with brackets:
+
+    get '/users', :model => [ Users ] do
+      # etc
     end
 
 ## Modular Style
