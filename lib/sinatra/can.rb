@@ -97,14 +97,13 @@ module Sinatra
       end
 
       def current_instance(id, model, key = :id)
-        instance ||= model.where(key => id).first if model.superclass.to_s == "ActiveRecord::Base"
-        instance ||= model.first(key => id)       if model.included_modules.map(&:to_s).include? "DataMapper::Resource"
-        instance ||= model.first(key => id)       if model.superclass.to_s == "Sequel::Model"
-        instance ||= model.find(key => id)        if model.superclass.to_s == "Ohm::Model"
+        instance = CanCan::ModelAdapters::AbstractAdapter.adapter_class(model).find(model, params[:id])
         error 404 unless instance
         instance_name = model.name.gsub(/([a-z\d])([A-Z])/,'\1_\2').downcase.split("::").last
         self.instance_variable_set("@#{instance_name}", instance)
         instance
+      rescue ActiveRecord::RecordNotFound
+        error 404
       end
 
       def current_operation
