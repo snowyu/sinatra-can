@@ -81,7 +81,7 @@ module Sinatra
       protected
 
       def current_ability
-        @current_ability ||= LocalAbility.new(current_user) if LocalAbility.include?(CanCan::Ability)
+        @current_ability ||= settings.local_ability.new(current_user) if settings.local_ability.include?(CanCan::Ability)
         @current_ability ||= ::Ability.new(current_user)
       end
 
@@ -131,8 +131,8 @@ module Sinatra
     #     can :edit, Article
     #   end
     def ability(&block)
-      LocalAbility.send :include, CanCan::Ability
-      LocalAbility.send :define_method, :initialize, &block
+      settings.local_ability.send :include, CanCan::Ability
+      settings.local_ability.send :define_method, :initialize, &block
     end
 
     def current_user_block
@@ -142,6 +142,7 @@ module Sinatra
     def self.registered(app)
       app.set(:can)   { |action, subject| condition { authorize!(action, subject) } }
       app.set(:model) { |subject| condition { load_and_authorize!(subject) } }
+      app.set(:local_ability, Class.new)
       app.set(:not_auth, nil)
       app.helpers Helpers
     end
