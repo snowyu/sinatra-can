@@ -73,7 +73,14 @@ module Sinatra
       # - :delete (delete)
       def load_and_authorize!(model)
         model = model.class unless model.is_a? Class
-        instance = current_instance(params[:id], model) if params[:id]
+
+        if params[:id]
+          instance = current_instance(params[:id], model)
+        elsif model.respond_to? :accessible_by
+          collection = model.accessible_by(current_ability, current_operation)
+          instance_name = model.name.gsub(/([a-z\d])([A-Z])/,'\1_\2').downcase.split("::").last
+          self.instance_variable_set("@#{instance_name}", collection)
+        end
 
         authorize! current_operation, instance || model
       end
