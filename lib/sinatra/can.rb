@@ -119,9 +119,6 @@ module Sinatra
       @current_user_block = block
     end
 
-    # Contains the Ability object
-    LocalAbility = Class.new
-
     # Use this block to create abilities. You can use the same syntax as in CanCan:
     #
     #   ability do |user|
