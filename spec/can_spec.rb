@@ -1,8 +1,4 @@
-require 'rspec'
-require 'rack/test'
-require 'sinatra'
-require 'dm-core'
-require 'sinatra/can'
+require 'spec_helper'
 
 describe 'sinatra-can' do
   include Rack::Test::Methods
@@ -14,7 +10,19 @@ describe 'sinatra-can' do
     MyApp
   end
 
-  before do
+  before :all do
+    DataMapper.setup(:default, 'sqlite::memory:')
+
+    class Article
+      include DataMapper::Resource
+
+      property :id, Serial
+      property :title, String
+    end
+
+    DataMapper.auto_migrate!
+    DataMapper.finalize
+
     class User
       def initialize(name = "guest")
         @name = name
@@ -29,18 +37,7 @@ describe 'sinatra-can' do
       end
     end
 
-    DataMapper.setup(:default, :adapter => 'in_memory')
-
-    class Article
-      include DataMapper::Resource
-
-      property :id, Serial
-      property :title, String
-    end
-
-    DataMapper.finalize
-
-    ability do |user|
+    app.ability do |user|
       can :edit, :all if user.is_admin?
       can :read, :all
       can :read, Article
@@ -130,7 +127,7 @@ describe 'sinatra-can' do
     article = Article.create(:title => 'test2')
 
     app.user { User.new('admin') }
-    app.post('/11', :model => ::Article) { }
+    app.post('/11', :model => Proc.new { Article }) { }
     post '/11'
     last_response.status.should == 403
   end
@@ -139,7 +136,7 @@ describe 'sinatra-can' do
     article = Article.create(:title => 'test3')
 
     app.user { User.new('admin') }
-    app.get('/12/:id', :model => ::Article) { @article.title }
+    app.get('/12/:id', :model => Proc.new { Article }) { @article.title }
     get '/12/' + article.id.to_s
     last_response.body.should == article.title
   end
@@ -148,7 +145,7 @@ describe 'sinatra-can' do
     article = Article.create(:title => 'test4')
 
     app.user { User.new('admin') }
-    app.before('/13/:id', :model => Article) { }
+    app.before('/13/:id', :model => Proc.new { Article }) { }
     app.get('/13/:id') { @article.title }
     get '/13/' + (article.id).to_s
     last_response.body.should == article.title
@@ -158,7 +155,7 @@ describe 'sinatra-can' do
     dummy = Article.create(:title => 'test4')
 
     app.user { User.new('admin') }
-    app.get('/14x/:id', :model => Article) { @article.title }
+    app.get('/14x/:id', :model => Proc.new { Article }) { @article.title }
     get '/14x/999'
     last_response.status.should == 404
   end

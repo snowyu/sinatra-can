@@ -1,8 +1,4 @@
-require 'rspec'
-require 'rack/test'
-require 'sinatra'
-require 'active_record'
-require './lib/sinatra/can'
+require 'spec_helper'
 
 describe 'sinatra-can 2' do
   include Rack::Test::Methods
@@ -14,8 +10,7 @@ describe 'sinatra-can 2' do
     MyAppAR
   end
 
-  before do
-    ActiveRecord::Base.establish_connection(:adapter => 'sqlite3', :database => ':memory:')
+  before :all do
     ActiveRecord::Base.connection.execute('CREATE TABLE user2s ("id" INTEGER PRIMARY KEY NOT NULL, "name" varchar(255) NOT NULL)')
     ActiveRecord::Base.connection.execute('CREATE TABLE article2s ("id" INTEGER PRIMARY KEY NOT NULL, title varchar(255) NOT NULL)')
 
@@ -28,11 +23,12 @@ describe 'sinatra-can 2' do
       end
     end
 
-    ability do |user|
+    app.ability do |user|
       can :edit, :all if user.is_admin?
       can :read, :all
       can :read, Article2
       can :list, User2 if user.is_admin?
+      can :list, User2, :id => user.id
       cannot :create, Article2
     end
 
@@ -157,15 +153,15 @@ describe 'sinatra-can 2' do
 
   it "should autoload a collection as the admin" do
     app.user { User2.find_by_id(1) }
-    app.get('/15', :model => Proc.new { User2 }) { @user2.count.to_s }
+    app.get('/15', :model => Proc.new { User2 }) { @user2.where(:name => 'admin').count.to_s }
     get '/15'
-    last_response.body.should == '2'
+    last_response.body.should == '1'
   end
 
-  it "should 403 on autoloading a collection when being a guest" do
+  it "should only partially load a collection as a guest" do
     app.user { User2.find_by_id(2) }
-    app.get('/16', :model => Proc.new { User2 }) { }
+    app.get('/16', :model => Proc.new { User2 }) { @user2.where(:name => 'admin').count.to_s }
     get '/16'
-    last_response.status.should == 403
+    last_response.body.should == "0"
   end
 end
