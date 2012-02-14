@@ -89,12 +89,13 @@ module Sinatra
         @current_user ||= instance_eval(&self.class.current_user_block) if self.class.current_user_block
       end
 
-      def current_instance(id, model)
-        instance ||= model.find_by_id(id)   if model.respond_to? :find_by_id    # ActiveRecord
-        instance ||= model.first(:id => id) if model.respond_to? :first         # DataMapper/MongoMapper
-        instance ||= model[id.to_i]         if model.respond_to? :[]            # Hash/Sequel/Ohm
+      def current_instance(id, model, key = :id)
+        instance ||= model.where(key => id).first if model.superclass.to_s == "ActiveRecord::Base"
+        instance ||= model.first(key => id)       if model.included_modules.map(&:to_s).include? "DataMapper::Resource"
+        instance ||= model.first(key => id)       if model.superclass.to_s == "Sequel::Model"
+        instance ||= model.find(key => id)        if model.superclass.to_s == "Ohm::Model"
         error 404 unless instance
-        instance_name = model.name.gsub(/([a-z\d])([A-Z])/,'\1_\2').downcase
+        instance_name = model.name.gsub(/([a-z\d])([A-Z])/,'\1_\2').downcase.split("::").last
         self.instance_variable_set("@#{instance_name}", instance)
         instance
       end
