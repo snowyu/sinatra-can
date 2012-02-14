@@ -9,6 +9,10 @@ module Sinatra
       #
       #   can? :destroy, @project
       #
+      # If you haven't instantiated the objects, you can check classes as well:
+      # 
+      #   can? :create, Project
+      #
       # And in views too, of course
       #
       #   <% if can? :create, Project %>
@@ -27,7 +31,7 @@ module Sinatra
         current_ability.cannot?(action, subject, options)
       end
 
-      # Authorizing in CanCan very neat. You just need a single line inside your helpers:
+      # Authorization in CanCan is extremely easy. You just need a single line inside your helpers:
       #
       #     def '/admin' do
       #       authorize! :admin, :all

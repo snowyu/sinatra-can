@@ -62,6 +62,10 @@ The can? method receives an action and an object as parameters and checks if the
     can? :destroy, @project
     cannot? :edit, @project
 
+If you haven't instantiated the objects, you can check classes as well:
+
+    can? :create, Project
+
 And in views too:
 
     <% if can? :create, Project %>
@@ -70,7 +74,7 @@ And in views too:
 
 ## Authorizing
 
-Authorizing in CanCan is very neat. You just need a single line inside your routes:
+Authorization in CanCan is extremely easy. You just need a single line inside your routes:
 
     def '/admin' do
       authorize! :admin, :all
