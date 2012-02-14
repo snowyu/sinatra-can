@@ -106,7 +106,7 @@ You can authorize based on model attributes as well. You can pass a hash of cond
 
 This condition works with all the other helpers, and provide you with even more granularity and ease of ability declaration.
 
-## Conditions
+## Sinatra 'Can' Condition
 
 There is a built-in condition called :can that can be used in your blocks. It returns 403 when the user has no access. It basically replaces the authorize! method.
 
@@ -118,7 +118,7 @@ There is a built-in condition called :can that can be used in your blocks. It re
 
 load_and_authorize is one of CanCan's greatest features. It will, if applicable, load a model based on the :id parameter, and authorize, according to the HTTP Request Method.
 
-The usage with this Sinatra adapter is a bit different and way simpler, and it's implemented from scratch. Since Sinatra is based on routes (as opposed to controllers + methods), you need to tell which model you want to use. It will guess the action (:view, :create, etc) using the HTTP verb, and an 'id' parameter to load the model.
+The usage with this Sinatra adapter is a bit different and way simpler. Since Sinatra is based on routes (as opposed to controllers + methods), you need to tell which model you want to use. It will guess the action (:view, :create, etc) using the HTTP verb, and an 'id' parameter to load the model.
 
 It is compatible with ActiveRecord, DataMapper and Sequel.
 
