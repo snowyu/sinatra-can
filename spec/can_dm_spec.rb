@@ -129,7 +129,7 @@ describe 'sinatra-can' do
     article = Articledm.create(:title => 'test2')
 
     app.user { Userdm.get(1) }
-    app.post('/11', :model => Proc.new { Articledm }) { }
+    app.post('/11', :model => [ Articledm ]) { }
     post '/11'
     last_response.status.should == 403
   end
@@ -138,7 +138,7 @@ describe 'sinatra-can' do
     article = Articledm.create(:title => 'test3')
 
     app.user { Userdm.get(1) }
-    app.get('/12/:id', :model => Proc.new { Articledm }) { @articledm.title }
+    app.get('/12/:id', :model => [ Articledm ]) { @articledm.title }
     get '/12/' + article.id.to_s
     last_response.body.should == article.title
   end
@@ -147,7 +147,7 @@ describe 'sinatra-can' do
     article = Articledm.create(:title => 'test4')
 
     app.user { Userdm.get(1) }
-    app.before('/13/:id', :model => Proc.new { Articledm }) { }
+    app.before('/13/:id', :model => [ Articledm ]) { }
     app.get('/13/:id') { @articledm.title }
     get '/13/' + (article.id).to_s
     last_response.body.should == article.title
@@ -157,21 +157,21 @@ describe 'sinatra-can' do
     dummy = Articledm.create(:title => 'test4')
 
     app.user { Userdm.get(1) }
-    app.get('/article14/:id', :model => Proc.new { Articledm }) { @articledm.title }
+    app.get('/article14/:id', :model => [ Articledm ]) { @articledm.title }
     get '/article14/999'
     last_response.status.should == 404
   end
 
   it "should autoload a collection as the admin" do
     app.user { Userdm.get(1) }
-    app.get('/15d', :model => Proc.new { Userdm }) { @userdm.all(:name => 'admin').count.to_s }
+    app.get('/15d', :model => [ Userdm ]) { @userdm.all(:name => 'admin').count.to_s }
     get '/15d'
     last_response.body.should == '1'
   end
 
   it "should 403 on autoloading a collection when being a guest" do
     app.user { Userdm.get(2) }
-    app.get('/16d', :model => Proc.new { Userdm }) { @userdm.all(:name => 'admin').count.to_s }
+    app.get('/16d', { :model => [ Userdm ] }) { @userdm.all(:name => 'admin').count.to_s }
     get '/16d'
     last_response.body.should == "0"
   end

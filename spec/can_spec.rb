@@ -10,19 +10,19 @@ describe 'sinatra-can' do
     MyApp
   end
 
+  DataMapper.setup(:default, 'sqlite::memory:')
+
+  class Article
+    include DataMapper::Resource
+
+    property :id, Serial
+    property :title, String
+  end
+
+  DataMapper.auto_migrate!
+  DataMapper.finalize
+
   before :all do
-    DataMapper.setup(:default, 'sqlite::memory:')
-
-    class Article
-      include DataMapper::Resource
-
-      property :id, Serial
-      property :title, String
-    end
-
-    DataMapper.auto_migrate!
-    DataMapper.finalize
-
     class User
       def initialize(name = "guest")
         @name = name
@@ -127,7 +127,7 @@ describe 'sinatra-can' do
     article = Article.create(:title => 'test2')
 
     app.user { User.new('admin') }
-    app.post('/11', :model => Proc.new { Article }) { }
+    app.post('/11', :model => [ Article ]) { }
     post '/11'
     last_response.status.should == 403
   end
@@ -136,7 +136,7 @@ describe 'sinatra-can' do
     article = Article.create(:title => 'test3')
 
     app.user { User.new('admin') }
-    app.get('/12/:id', :model => Proc.new { Article }) { @article.title }
+    app.get('/12/:id', :model => [ Article ]) { @article.title }
     get '/12/' + article.id.to_s
     last_response.body.should == article.title
   end
@@ -145,7 +145,7 @@ describe 'sinatra-can' do
     article = Article.create(:title => 'test4')
 
     app.user { User.new('admin') }
-    app.before('/13/:id', :model => Proc.new { Article }) { }
+    app.before('/13/:id', :model => [ Article ]) { }
     app.get('/13/:id') { @article.title }
     get '/13/' + (article.id).to_s
     last_response.body.should == article.title
@@ -155,7 +155,7 @@ describe 'sinatra-can' do
     dummy = Article.create(:title => 'test4')
 
     app.user { User.new('admin') }
-    app.get('/14x/:id', :model => Proc.new { Article }) { @article.title }
+    app.get('/14x/:id', :model => [ Article ]) { @article.title }
     get '/14x/999'
     last_response.status.should == 404
   end

@@ -153,14 +153,14 @@ describe 'sinatra-can 2' do
 
   it "should autoload a collection as the admin" do
     app.user { User2.find_by_id(1) }
-    app.get('/15', :model => Proc.new { User2 }) { @user2.where(:name => 'admin').count.to_s }
+    app.get('/15', :model => User2) { @user2.where(:name => 'admin').count.to_s }
     get '/15'
     last_response.body.should == '1'
   end
 
   it "should only partially load a collection as a guest" do
     app.user { User2.find_by_id(2) }
-    app.get('/16', :model => Proc.new { User2 }) { @user2.where(:name => 'admin').count.to_s }
+    app.get('/16', :model => User2) { @user2.where(:name => 'admin').count.to_s }
     get '/16'
     last_response.body.should == "0"
   end
