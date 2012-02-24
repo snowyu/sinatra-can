@@ -89,7 +89,7 @@ module Sinatra
 
         if params[:id]
           instance = current_instance(params[:id], model)
-        elsif model.respond_to? :accessible_by
+        elsif current_operation == :list and model.respond_to? :accessible_by
           collection = model.accessible_by(current_ability, current_operation)
           instance_name = model.name.gsub(/([a-z\d])([A-Z])/,'\1_\2').downcase.split("::").last
           self.instance_variable_set("@#{instance_name}", collection)
