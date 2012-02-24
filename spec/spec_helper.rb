@@ -1,4 +1,4 @@
-CANCAN_TWO = true
+#CANCAN_TWO = true
 
 if Object.const_defined? :CANCAN_TWO
   gem 'cancan', '=2.0.0.alpha'

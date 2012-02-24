@@ -46,6 +46,7 @@ describe 'sinatra-can' do
         can :read, :articles
         cannot :create, :articles
         can :update, :articles if user.is_admin?
+        can :update, :articles, [ :content ]
       else
         can :read, Article
         cannot :create, Article
@@ -179,12 +180,23 @@ describe 'sinatra-can' do
     last_response.body.should == article.title
   end
 
-  it "shouldn't allow updating Article as guest" do
-    article = Article.create(:title => 'test6')
+  if Object.const_defined? :CANCAN_TWO
+    it "shouldn't allow updating Article's title as guest" do
+      article = Article.create(:title => 'test6')
 
-    app.user { User.new('guest') }
-    app.put('/16/:id', :model => [ Article ]) { @article.title }
-    put '/16/' + article.id.to_s
-    last_response.status.should == 403
+      app.user { User.new('guest') }
+      app.put('/16/:id', :model => [ Article ]) { @article.title }
+      put '/16/' + article.id.to_s, 'article[title]' => 'new title'
+      last_response.status.should == 403
+    end
+
+    it "should allow a guest to update an article's content" do
+      article = Article.create(:title => 'test7')
+
+      app.user { User.new('guest') }
+      app.put('/17/:id', :model => [ Article ]) { @article.title }
+      put '/17/' + article.id.to_s, 'article[content]' => 'new content'
+      last_response.status.should == 200
+    end
   end
 end

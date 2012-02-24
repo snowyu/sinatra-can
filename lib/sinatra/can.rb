@@ -93,7 +93,13 @@ module Sinatra
           collection = current_collection(model)
         end
 
-        authorize! current_operation, instance || model, :symbol => symbol
+        if params[instance_name(model)] && current_ability.respond_to?(:'has_attributes?') && current_ability.has_attributes?(current_operation, instance || symbol || model)
+          params[instance_name(model)].each do |attribute, value|
+            authorize! current_operation, instance || symbol || model, :attribute => attribute
+          end
+        else
+          authorize! current_operation, instance || model, :symbol => symbol
+        end
       end
 
       protected
