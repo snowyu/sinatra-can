@@ -36,11 +36,19 @@ describe 'sinatra-can' do
 
     app.ability do |user|
       can :edit, :all if user.is_admin?
-      can :read, :all
-      can :read, Articledm
-      cannot :create, Articledm
-      can :list, Userdm if user.is_admin?
-      can :list, Userdm, :id => user.id
+      can :read, :all if user.is_admin?
+
+      if Object.const_defined? :CANCAN_TWO
+        can :read, :articledms
+        cannot :create, :articledms
+        can :list, :userdms if user.is_admin?
+        can :list, :userdms, :id => user.id
+      else
+        can :read, Articledm
+        cannot :create, Articledm
+        can :list, Userdm if user.is_admin?
+        can :list, Userdm, :id => user.id
+      end
     end
 
     app.set :dump_errors, true
@@ -163,15 +171,27 @@ describe 'sinatra-can' do
   end
 
   it "should autoload a collection as the admin" do
-    app.user { Userdm.get(1) }
-    app.get('/15d', :model => [ Userdm ]) { @userdm.all(:name => 'admin').count.to_s }
+    app.user { Userdm.first(:name => 'admin') }
+
+    if Object.const_defined? :CANCAN_TWO
+      app.get('/15d', { :model => [ Userdm, :userdms ] }) { @userdm.all(:name => 'admin').count.to_s }
+    else
+      app.get('/15d', :model => [ Userdm ]) { @userdm.all(:name => 'admin').count.to_s }
+    end
+
     get '/15d'
+    last_response.status.should == 200
     last_response.body.should == '1'
   end
 
-  it "should 403 on autoloading a collection when being a guest" do
+  it "should return zero elements when autoloading a collection when being a guest" do
     app.user { Userdm.get(2) }
-    app.get('/16d', { :model => [ Userdm ] }) { @userdm.all(:name => 'admin').count.to_s }
+
+    if Object.const_defined? :CANCAN_TWO
+      app.get('/16d', { :model => [ Userdm, :userdms ] }) { @userdm.all(:name => 'admin').count.to_s }
+    else
+      app.get('/16d', { :model => [ Userdm ] }) { @userdm.all(:name => 'admin').count.to_s }
+    end
     get '/16d'
     last_response.body.should == "0"
   end

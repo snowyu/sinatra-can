@@ -18,8 +18,8 @@ module Sinatra
       #   <% if can? :create, Project %>
       #     <%= link_to "New Project", new_project_path %>
       #   <% end %>
-      def can?(action, subject, options = {})
-        current_ability.can?(action, subject, options)
+      def can?(action, subject, attribute = nil)
+        current_ability.can?(action, subject, attribute)
       end
 
       # The cannot? methods works just like the can?, except it's the opposite.
@@ -27,8 +27,8 @@ module Sinatra
       #   cannot? :edit, @project
       #
       # Works in views and controllers.
-      def cannot?(action, subject, options = {})
-        current_ability.cannot?(action, subject, options)
+      def cannot?(action, subject, attribute = nil)
+        current_ability.cannot?(action, subject, attribute)
       end
 
       # Authorization in CanCan is extremely easy. You just need a single line inside your helpers:
@@ -48,7 +48,7 @@ module Sinatra
       #     authorize! :admin, :all, :not_auth => '/login'
       #
       def authorize!(action, subject, options = {})
-        if current_ability.cannot?(action, subject, options)
+        if current_ability.cannot?(action, options[:symbol] || subject, options[:attribute])
           redirect options[:not_auth] || settings.not_auth || error(403)
         end
       end
@@ -84,7 +84,7 @@ module Sinatra
       # - :create (post)
       # - :update (put or patch)
       # - :delete (delete)
-      def load_and_authorize!(model)
+      def load_and_authorize!(model, symbol = nil)
         model = model.class unless model.is_a? Class
 
         if params[:id]
@@ -93,7 +93,7 @@ module Sinatra
           collection = current_collection(model)
         end
 
-        authorize! current_operation, instance || model
+        authorize! current_operation, instance || model, :symbol => symbol
       end
 
       protected
@@ -164,7 +164,7 @@ module Sinatra
 
     def self.registered(app)
       app.set(:can)   { |action, subject| condition { authorize!(action, subject) } }
-      app.set(:model) { |subject| condition { load_and_authorize!(subject) } }
+      app.set(:model) { |*args| condition { load_and_authorize!(*args) } }
       app.set(:local_ability, Class.new)
       app.set(:not_auth, nil)
       app.helpers Helpers

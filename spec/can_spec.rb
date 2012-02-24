@@ -17,6 +17,7 @@ describe 'sinatra-can' do
 
     property :id, Serial
     property :title, String
+    property :content, String
   end
 
   DataMapper.auto_migrate!
@@ -40,8 +41,16 @@ describe 'sinatra-can' do
     app.ability do |user|
       can :edit, :all if user.is_admin?
       can :read, :all
-      can :read, Article
-      cannot :create, Article
+
+      if Object.const_defined? :CANCAN_TWO
+        can :read, :articles
+        cannot :create, :articles
+        can :update, :articles if user.is_admin?
+      else
+        can :read, Article
+        cannot :create, Article
+        can :update, Article if user.is_admin?
+      end
     end
 
     app.set :dump_errors, true
@@ -158,5 +167,24 @@ describe 'sinatra-can' do
     app.get('/14x/:id', :model => [ Article ]) { @article.title }
     get '/14x/999'
     last_response.status.should == 404
+  end
+
+  it "should autoload with put requests as well" do
+    article = Article.create(:title => 'test5')
+
+    app.user { User.new('admin') }
+    app.put('/15/:id', :model => [ Article ]) { @article.title }
+    put '/15/' + article.id.to_s
+    last_response.status.should == 200
+    last_response.body.should == article.title
+  end
+
+  it "shouldn't allow updating Article as guest" do
+    article = Article.create(:title => 'test6')
+
+    app.user { User.new('guest') }
+    app.put('/16/:id', :model => [ Article ]) { @article.title }
+    put '/16/' + article.id.to_s
+    last_response.status.should == 403
   end
 end

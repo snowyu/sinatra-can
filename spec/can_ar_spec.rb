@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-describe 'sinatra-can 2' do
+describe 'sinatra-can with activerecord' do
   include Rack::Test::Methods
 
   class MyAppAR < Sinatra::Application
@@ -26,10 +26,17 @@ describe 'sinatra-can 2' do
     app.ability do |user|
       can :edit, :all if user.is_admin?
       can :read, :all
-      can :read, Article2
-      can :list, User2 if user.is_admin?
-      can :list, User2, :id => user.id
-      cannot :create, Article2
+      if Object.const_defined? :CANCAN_TWO
+        can :read, :article2s
+        can :list, :user2s if user.is_admin?
+        can :list, :user2s, :id => user.id
+        cannot :create, :article2s
+      else
+        can :read, Article2
+        can :list, User2 if user.is_admin?
+        can :list, User2, :id => user.id
+        cannot :create, Article2
+      end
     end
 
     app.set :dump_errors, true
@@ -152,16 +159,30 @@ describe 'sinatra-can 2' do
   end
 
   it "should autoload a collection as the admin" do
-    app.user { User2.find_by_id(1) }
-    app.get('/15', :model => User2) { @user2.where(:name => 'admin').count.to_s }
+    app.user { User2.find_by_name('admin') }
+
+    if Object.const_defined? :CANCAN_TWO
+      app.get('/15', :model => [ User2, :user2s ]) { @user2.where(:name => 'admin').count.to_s }
+    else
+      app.get('/15', :model => User2) { @user2.where(:name => 'admin').count.to_s }
+    end
+
     get '/15'
-    last_response.body.should == '1'
+    last_response.status.should == 200
+    last_response.body.should == "1"
   end
 
   it "should only partially load a collection as a guest" do
-    app.user { User2.find_by_id(2) }
-    app.get('/16', :model => User2) { @user2.where(:name => 'admin').count.to_s }
+    app.user { User2.find_by_name('guest') }
+
+    if Object.const_defined? :CANCAN_TWO
+      app.get('/16', :model => [ User2, :user2s ]) { @user2.where(:name => 'admin').count.to_s }
+    else
+      app.get('/16', :model => User2) { @user2.where(:name => 'admin').count.to_s }
+    end
+
     get '/16'
+    last_response.status.should == 200
     last_response.body.should == "0"
   end
 end
