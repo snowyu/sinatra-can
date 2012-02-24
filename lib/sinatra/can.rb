@@ -87,12 +87,10 @@ module Sinatra
       def load_and_authorize!(model)
         model = model.class unless model.is_a? Class
 
-
         if params[:id]
           instance = current_instance(params[:id], model)
         elsif current_operation == :list and model.respond_to? :accessible_by
-          collection = model.accessible_by(current_ability, current_operation)
-          self.instance_variable_set("@#{instance_name(model)}", collection)
+          collection = current_collection(model)
         end
 
         authorize! current_operation, instance || model
@@ -116,6 +114,11 @@ module Sinatra
         instance
       rescue ActiveRecord::RecordNotFound
         error 404
+      end
+
+      def current_collection(model)
+        collection = model.accessible_by(current_ability, current_operation)
+        self.instance_variable_set("@#{instance_name(model)}", collection)
       end
 
       def instance_name(model)
