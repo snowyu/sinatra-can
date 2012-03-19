@@ -49,6 +49,8 @@ module Sinatra
       #
       def authorize!(action, subject, options = {})
         if current_ability.cannot?(action, subject, options)
+          session[:return_to] = request.path if settings.auth_use_referrer
+          redirect settings.auth_failure_path if !user && settings.auth_failure_path
           redirect options[:not_auth] || settings.not_auth || error(403)
         end
       end
@@ -97,14 +99,21 @@ module Sinatra
       end
 
       protected
+      # The main accessor to the warden middleware
+      def warden
+        request.env['warden']
+      end
+      # Access the user from the current session
+      #
+      # @param [Symbol] the scope for the logged in user
+      def current_user(scope=nil)
+        result = scope ? warden.user(scope) : warden.user
+        result
+      end
 
       def current_ability
         @current_ability ||= settings.local_ability.new(current_user) if settings.local_ability.include?(CanCan::Ability)
         @current_ability ||= ::Ability.new(current_user)
-      end
-
-      def current_user
-        @current_user ||= instance_eval(&self.class.current_user_block) if self.class.current_user_block
       end
 
       def current_instance(id, model, key = :id)
@@ -136,15 +145,6 @@ module Sinatra
       end
     end
 
-    # Use this block to pass the current user to CanCan. You have access to all Sinatra variables inside it.
-    #
-    #   user do
-    #     User.find(:id => session[:id])
-    #   end
-    def user(&block)
-      @current_user_block = block
-    end
-
     # Use this block to create abilities. You can use the same syntax as in CanCan:
     #
     #   ability do |user|
@@ -156,10 +156,6 @@ module Sinatra
     def ability(&block)
       settings.local_ability.send :include, CanCan::Ability
       settings.local_ability.send :define_method, :initialize, &block
-    end
-
-    def current_user_block
-      @current_user_block
     end
 
     def self.registered(app)
