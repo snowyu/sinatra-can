@@ -167,5 +167,5 @@ module Sinatra
     end
   end
 
-  register Can
+  #register Can
 end
