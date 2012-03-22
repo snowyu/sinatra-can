@@ -191,7 +191,7 @@ module Sinatra
 
     def self.registered(app)
       app.set(:can)   { |action, subject| condition { authorize!(action, subject) } }
-      app.set(:model) { |a,b, subject| condition { load_and_authorize!(subject, a, b) } }
+      app.set(:model) { |subject| condition { load_and_authorize!(subject) } }
       app.set(:local_ability, Class.new)
       app.set(:not_auth, nil)
       app.helpers Helpers
