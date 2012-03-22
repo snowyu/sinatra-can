@@ -49,11 +49,7 @@ Alternatively, you can use a class named Ability, which is useful if you're port
 
 ## Current User
 
-You can pass the current user with a simple block:
-
-    user do
-      User.find(:id => session[:id])
-    end
+You MUST use the warden middleware first.
 
 ## Checking Abilities
 
@@ -135,6 +131,12 @@ There's also a handy condition:
 
     get '/projects/:id', :model => Project do
       @project.name
+    end
+
+And you can use proc to load the model instance too:
+
+    get '/project/:owner/:project', :model => lambda{Project.get(params[:owner], params[:project])} do
+      @project
     end
 
 You can load collections too, with both syntaxes. Just use a `get` handler, without an `:id` property:

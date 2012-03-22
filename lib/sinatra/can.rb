@@ -70,11 +70,18 @@ module Sinatra
       #       @project.name
       #     end
       # 
+      # You can load instance by a specified proc:
+      #
+      #     get '/project/:owner/:name', :model => lambda{Project.get(params[:owner],params[:name])},  do
+      #       # here are your project
+      #       @project
+      #     end
+      #
       # You can load collections too, with both syntaxes. Just use a `get` handler, without an `:id` property:
       # 
-      #     get '/projects', :model => Project do
+      #     get '/project', :model => Project  do
       #       # here are your projects
-      #       @project
+      #       @projects
       #     end
       # 
       # Both collection loading and individual entity loading will respect the resource conditions.
@@ -86,16 +93,33 @@ module Sinatra
       # - :create (post)
       # - :update (put or patch)
       # - :delete (delete)
-      def load_and_authorize!(model)
-        model = model.class unless model.is_a? Class
-
-        if params[:id]
-          instance = current_instance(params[:id], model)
-        elsif current_operation == :list and model.respond_to? :accessible_by
-          collection = current_collection(model)
+      def load_and_authorize!(model, action=nil)
+        action = current_operation unless action
+        if model.is_a? Proc
+        begin
+          content = model.call
+          error 404 unless content
+          error 404 if content.is_a? Array
+          set_instance_var instance_name(content.class), content
+        rescue ActiveRecord::RecordNotFound
+          error 404
+        end
+        else
+          model = model.class unless model.is_a? Class
+          if params[:id]
+            content = current_instance(params[:id], model)
+          elsif (action == :list || action == :index) and model.respond_to? :accessible_by
+            collection = current_collection(model)
+          end
         end
 
-        authorize! current_operation, instance || model
+        authorize! action, content || model
+        #resource_authorize! content || model
+      end
+
+      def resource_authorize!(aResource, action=nil)
+        action = current_operation unless action
+        authorize! action, aResource
       end
 
       protected
@@ -119,7 +143,7 @@ module Sinatra
       def current_instance(id, model, key = :id)
         instance = CanCan::ModelAdapters::AbstractAdapter.adapter_class(model).find(model, params[:id])
         error 404 unless instance
-        self.instance_variable_set("@#{instance_name(model)}", instance)
+        set_instance_var(instance_name(model), instance)
         instance
       rescue ActiveRecord::RecordNotFound
         error 404
@@ -127,7 +151,11 @@ module Sinatra
 
       def current_collection(model)
         collection = model.accessible_by(current_ability, current_operation)
-        self.instance_variable_set("@#{instance_name(model)}", collection)
+        set_instance_var(instance_name(model).pluralize, collection)
+      end
+
+      def set_instance_var(name, value)
+        self.instance_variable_set("@#{name}", value)
       end
 
       def instance_name(model)
@@ -136,7 +164,10 @@ module Sinatra
 
       def current_operation
         case env["REQUEST_METHOD"]
-          when 'GET' then params[:id] ? :read : :list
+          when 'GET' then
+            result = params[:id] ? :read : :list
+            result = request.route_obj.named if request.route_obj && request.route_obj.named
+            result
           when 'POST' then :create
           when 'PUT' then :update
           when 'PATCH' then :update
@@ -160,7 +191,7 @@ module Sinatra
 
     def self.registered(app)
       app.set(:can)   { |action, subject| condition { authorize!(action, subject) } }
-      app.set(:model) { |subject| condition { load_and_authorize!(subject) } }
+      app.set(:model) { |a,b, subject| condition { load_and_authorize!(subject, a, b) } }
       app.set(:local_ability, Class.new)
       app.set(:not_auth, nil)
       app.helpers Helpers
